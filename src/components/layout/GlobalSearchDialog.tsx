@@ -46,7 +46,7 @@ export function GlobalSearchDialog({
     0;
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title="جستجوی سراسری">
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
         placeholder="جستجوی نام مخاطب، شماره، شناسه روبیکا یا متن پیام..."
         value={query}

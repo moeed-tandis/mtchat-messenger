@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/stores/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const Route = createFileRoute("/_app")({
+export const Route = createFileRoute("/_authed")({
   ssr: false,
   component: AppLayout,
 });

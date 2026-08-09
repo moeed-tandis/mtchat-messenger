@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthedContactsRouteImport } from './routes/_authed.contacts'
 import { Route as AuthedConversationsRouteImport } from './routes/_authed.conversations'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed.dashboard'
 import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
@@ -31,6 +32,11 @@ const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedContactsRoute = AuthedContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedConversationsRoute = AuthedConversationsRouteImport.update({
   id: '/conversations',
@@ -63,6 +69,7 @@ const AuthedConversationsConversationIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/contacts': typeof AuthedContactsRoute
   '/conversations': typeof AuthedConversationsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
   '/users': typeof AuthedUsersRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/contacts': typeof AuthedContactsRoute
   '/dashboard': typeof AuthedDashboardRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authed/contacts': typeof AuthedContactsRoute
   '/_authed/conversations': typeof AuthedConversationsRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/users': typeof AuthedUsersRoute
@@ -93,6 +102,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/contacts'
     | '/conversations'
     | '/dashboard'
     | '/users'
@@ -102,6 +112,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/contacts'
     | '/dashboard'
     | '/users'
     | '/conversations/$conversationId'
@@ -111,6 +122,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/login'
+    | '/_authed/contacts'
     | '/_authed/conversations'
     | '/_authed/dashboard'
     | '/_authed/users'
@@ -146,6 +158,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/contacts': {
+      id: '/_authed/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AuthedContactsRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/conversations': {
       id: '/_authed/conversations'
@@ -200,12 +219,14 @@ const AuthedConversationsRouteWithChildren =
   AuthedConversationsRoute._addFileChildren(AuthedConversationsRouteChildren)
 
 interface AuthedRouteChildren {
+  AuthedContactsRoute: typeof AuthedContactsRoute
   AuthedConversationsRoute: typeof AuthedConversationsRouteWithChildren
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedUsersRoute: typeof AuthedUsersRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedContactsRoute: AuthedContactsRoute,
   AuthedConversationsRoute: AuthedConversationsRouteWithChildren,
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedUsersRoute: AuthedUsersRoute,

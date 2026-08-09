@@ -1,24 +1,47 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useAuth } from "@/stores/auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  ssr: false,
+  head: () => ({
+    meta: [
+      { title: "MTchat — پنل پیام‌رسان تیمی" },
+      {
+        name: "description",
+        content: "MTchat؛ داشبورد تیمی برای دریافت و پاسخ به پیام‌های مشتریان.",
+      },
+      { property: "og:title", content: "MTchat — پنل پیام‌رسان تیمی" },
+      {
+        property: "og:description",
+        content: "مدیریت گفتگوها، کاربران و گزارش‌های پیام‌رسان در یک پنل.",
+      },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const { loading, isAuthenticated, isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!isAuthenticated) {
+      void navigate({ to: "/login", replace: true });
+      return;
+    }
+    void navigate({ to: isSuperAdmin ? "/dashboard" : "/conversations", replace: true });
+  }, [loading, isAuthenticated, isSuperAdmin, navigate]);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <div className="w-64 space-y-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+      </div>
     </div>
   );
 }

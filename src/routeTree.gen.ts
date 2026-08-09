@@ -16,7 +16,10 @@ import { Route as AuthedConnectionsRouteImport } from './routes/_authed.connecti
 import { Route as AuthedContactsRouteImport } from './routes/_authed.contacts'
 import { Route as AuthedConversationsRouteImport } from './routes/_authed.conversations'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed.dashboard'
+import { Route as AuthedLogsRouteImport } from './routes/_authed.logs'
 import { Route as AuthedProfileRouteImport } from './routes/_authed.profile'
+import { Route as AuthedRoutingRouteImport } from './routes/_authed.routing'
+import { Route as AuthedSettingsRouteImport } from './routes/_authed.settings'
 import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
 import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed.conversations.$conversationId'
@@ -55,9 +58,24 @@ const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedLogsRoute = AuthedLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedProfileRoute = AuthedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedRoutingRoute = AuthedRoutingRouteImport.update({
+  id: '/routing',
+  path: '/routing',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedUsersRoute = AuthedUsersRouteImport.update({
@@ -85,7 +103,10 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof AuthedContactsRoute
   '/conversations': typeof AuthedConversationsRouteWithChildren
   '/dashboard': typeof AuthedDashboardRoute
+  '/logs': typeof AuthedLogsRoute
   '/profile': typeof AuthedProfileRoute
+  '/routing': typeof AuthedRoutingRoute
+  '/settings': typeof AuthedSettingsRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations/': typeof AuthedConversationsIndexRoute
@@ -96,7 +117,10 @@ export interface FileRoutesByTo {
   '/connections': typeof AuthedConnectionsRoute
   '/contacts': typeof AuthedContactsRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/logs': typeof AuthedLogsRoute
   '/profile': typeof AuthedProfileRoute
+  '/routing': typeof AuthedRoutingRoute
+  '/settings': typeof AuthedSettingsRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations': typeof AuthedConversationsIndexRoute
@@ -110,7 +134,10 @@ export interface FileRoutesById {
   '/_authed/contacts': typeof AuthedContactsRoute
   '/_authed/conversations': typeof AuthedConversationsRouteWithChildren
   '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/logs': typeof AuthedLogsRoute
   '/_authed/profile': typeof AuthedProfileRoute
+  '/_authed/routing': typeof AuthedRoutingRoute
+  '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/users': typeof AuthedUsersRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/conversations/': typeof AuthedConversationsIndexRoute
@@ -124,7 +151,10 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/conversations'
     | '/dashboard'
+    | '/logs'
     | '/profile'
+    | '/routing'
+    | '/settings'
     | '/users'
     | '/conversations/$conversationId'
     | '/conversations/'
@@ -135,7 +165,10 @@ export interface FileRouteTypes {
     | '/connections'
     | '/contacts'
     | '/dashboard'
+    | '/logs'
     | '/profile'
+    | '/routing'
+    | '/settings'
     | '/users'
     | '/conversations/$conversationId'
     | '/conversations'
@@ -148,7 +181,10 @@ export interface FileRouteTypes {
     | '/_authed/contacts'
     | '/_authed/conversations'
     | '/_authed/dashboard'
+    | '/_authed/logs'
     | '/_authed/profile'
+    | '/_authed/routing'
+    | '/_authed/settings'
     | '/_authed/users'
     | '/_authed/conversations/$conversationId'
     | '/_authed/conversations/'
@@ -211,11 +247,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/logs': {
+      id: '/_authed/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof AuthedLogsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/profile': {
       id: '/_authed/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthedProfileRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/routing': {
+      id: '/_authed/routing'
+      path: '/routing'
+      fullPath: '/routing'
+      preLoaderRoute: typeof AuthedRoutingRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/users': {
@@ -261,7 +318,10 @@ interface AuthedRouteChildren {
   AuthedContactsRoute: typeof AuthedContactsRoute
   AuthedConversationsRoute: typeof AuthedConversationsRouteWithChildren
   AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedLogsRoute: typeof AuthedLogsRoute
   AuthedProfileRoute: typeof AuthedProfileRoute
+  AuthedRoutingRoute: typeof AuthedRoutingRoute
+  AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedUsersRoute: typeof AuthedUsersRoute
 }
 
@@ -270,7 +330,10 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedContactsRoute: AuthedContactsRoute,
   AuthedConversationsRoute: AuthedConversationsRouteWithChildren,
   AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedLogsRoute: AuthedLogsRoute,
   AuthedProfileRoute: AuthedProfileRoute,
+  AuthedRoutingRoute: AuthedRoutingRoute,
+  AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedUsersRoute: AuthedUsersRoute,
 }
 
@@ -285,3 +348,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

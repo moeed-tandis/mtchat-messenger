@@ -39,8 +39,8 @@ function ConversationsLayout() {
   const filters: ConversationFilters = {
     scope,
     query,
-    currentUserId: user?.id,
-    ...(isSuperAdmin ? {} : { restrictToUserId: user?.id }),
+    ...(user ? { currentUserId: user.id } : {}),
+    ...(!isSuperAdmin && user ? { restrictToUserId: user.id } : {}),
   };
 
   const conversationsQuery = useQuery({
@@ -72,7 +72,7 @@ function ConversationsLayout() {
             <ConversationList
               items={conversationsQuery.data ?? []}
               loading={conversationsQuery.isLoading}
-              selectedId={selectedId}
+              {...(selectedId ? { selectedId } : {})}
               onSelect={(id) =>
                 void navigate({
                   to: "/conversations/$conversationId",

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedConversationsRouteImport } from './routes/_authed.conversations'
+import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,30 +34,44 @@ const AuthedConversationsRoute = AuthedConversationsRouteImport.update({
   path: '/conversations',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedConversationsIndexRoute =
+  AuthedConversationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedConversationsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/conversations': typeof AuthedConversationsRoute
+  '/conversations': typeof AuthedConversationsRouteWithChildren
+  '/conversations/': typeof AuthedConversationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/conversations': typeof AuthedConversationsRoute
+  '/conversations': typeof AuthedConversationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authed/conversations': typeof AuthedConversationsRoute
+  '/_authed/conversations': typeof AuthedConversationsRouteWithChildren
+  '/_authed/conversations/': typeof AuthedConversationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/conversations'
+  fullPaths: '/' | '/login' | '/conversations' | '/conversations/'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/login' | '/conversations'
-  id: '__root__' | '/' | '/_authed' | '/login' | '/_authed/conversations'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/login'
+    | '/_authed/conversations'
+    | '/_authed/conversations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,15 +110,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedConversationsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/conversations/': {
+      id: '/_authed/conversations/'
+      path: '/'
+      fullPath: '/conversations/'
+      preLoaderRoute: typeof AuthedConversationsIndexRouteImport
+      parentRoute: typeof AuthedConversationsRoute
+    }
   }
 }
 
+interface AuthedConversationsRouteChildren {
+  AuthedConversationsIndexRoute: typeof AuthedConversationsIndexRoute
+}
+
+const AuthedConversationsRouteChildren: AuthedConversationsRouteChildren = {
+  AuthedConversationsIndexRoute: AuthedConversationsIndexRoute,
+}
+
+const AuthedConversationsRouteWithChildren =
+  AuthedConversationsRoute._addFileChildren(AuthedConversationsRouteChildren)
+
 interface AuthedRouteChildren {
-  AuthedConversationsRoute: typeof AuthedConversationsRoute
+  AuthedConversationsRoute: typeof AuthedConversationsRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedConversationsRoute: AuthedConversationsRoute,
+  AuthedConversationsRoute: AuthedConversationsRouteWithChildren,
 }
 
 const AuthedRouteWithChildren =

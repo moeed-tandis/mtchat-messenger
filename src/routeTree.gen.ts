@@ -10,33 +10,190 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthedConnectionsRouteImport } from './routes/_authed.connections'
+import { Route as AuthedContactsRouteImport } from './routes/_authed.contacts'
+import { Route as AuthedConversationsRouteImport } from './routes/_authed.conversations'
+import { Route as AuthedDashboardRouteImport } from './routes/_authed.dashboard'
+import { Route as AuthedLogsRouteImport } from './routes/_authed.logs'
+import { Route as AuthedProfileRouteImport } from './routes/_authed.profile'
+import { Route as AuthedRoutingRouteImport } from './routes/_authed.routing'
+import { Route as AuthedSettingsRouteImport } from './routes/_authed.settings'
+import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
+import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
+import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed.conversations.$conversationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedConnectionsRoute = AuthedConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedContactsRoute = AuthedContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedConversationsRoute = AuthedConversationsRouteImport.update({
+  id: '/conversations',
+  path: '/conversations',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedLogsRoute = AuthedLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProfileRoute = AuthedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedRoutingRoute = AuthedRoutingRouteImport.update({
+  id: '/routing',
+  path: '/routing',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedUsersRoute = AuthedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedConversationsIndexRoute =
+  AuthedConversationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedConversationsRoute,
+  } as any)
+const AuthedConversationsConversationIdRoute =
+  AuthedConversationsConversationIdRouteImport.update({
+    id: '/$conversationId',
+    path: '/$conversationId',
+    getParentRoute: () => AuthedConversationsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/connections': typeof AuthedConnectionsRoute
+  '/contacts': typeof AuthedContactsRoute
+  '/conversations': typeof AuthedConversationsRouteWithChildren
+  '/dashboard': typeof AuthedDashboardRoute
+  '/logs': typeof AuthedLogsRoute
+  '/profile': typeof AuthedProfileRoute
+  '/routing': typeof AuthedRoutingRoute
+  '/settings': typeof AuthedSettingsRoute
+  '/users': typeof AuthedUsersRoute
+  '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/conversations/': typeof AuthedConversationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/connections': typeof AuthedConnectionsRoute
+  '/contacts': typeof AuthedContactsRoute
+  '/dashboard': typeof AuthedDashboardRoute
+  '/logs': typeof AuthedLogsRoute
+  '/profile': typeof AuthedProfileRoute
+  '/routing': typeof AuthedRoutingRoute
+  '/settings': typeof AuthedSettingsRoute
+  '/users': typeof AuthedUsersRoute
+  '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/conversations': typeof AuthedConversationsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authed/connections': typeof AuthedConnectionsRoute
+  '/_authed/contacts': typeof AuthedContactsRoute
+  '/_authed/conversations': typeof AuthedConversationsRouteWithChildren
+  '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/logs': typeof AuthedLogsRoute
+  '/_authed/profile': typeof AuthedProfileRoute
+  '/_authed/routing': typeof AuthedRoutingRoute
+  '/_authed/settings': typeof AuthedSettingsRoute
+  '/_authed/users': typeof AuthedUsersRoute
+  '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/_authed/conversations/': typeof AuthedConversationsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/connections'
+    | '/contacts'
+    | '/conversations'
+    | '/dashboard'
+    | '/logs'
+    | '/profile'
+    | '/routing'
+    | '/settings'
+    | '/users'
+    | '/conversations/$conversationId'
+    | '/conversations/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/connections'
+    | '/contacts'
+    | '/dashboard'
+    | '/logs'
+    | '/profile'
+    | '/routing'
+    | '/settings'
+    | '/users'
+    | '/conversations/$conversationId'
+    | '/conversations'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/login'
+    | '/_authed/connections'
+    | '/_authed/contacts'
+    | '/_authed/conversations'
+    | '/_authed/dashboard'
+    | '/_authed/logs'
+    | '/_authed/profile'
+    | '/_authed/routing'
+    | '/_authed/settings'
+    | '/_authed/users'
+    | '/_authed/conversations/$conversationId'
+    | '/_authed/conversations/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +205,145 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/connections': {
+      id: '/_authed/connections'
+      path: '/connections'
+      fullPath: '/connections'
+      preLoaderRoute: typeof AuthedConnectionsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/contacts': {
+      id: '/_authed/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AuthedContactsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/conversations': {
+      id: '/_authed/conversations'
+      path: '/conversations'
+      fullPath: '/conversations'
+      preLoaderRoute: typeof AuthedConversationsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard': {
+      id: '/_authed/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthedDashboardRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/logs': {
+      id: '/_authed/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof AuthedLogsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/profile': {
+      id: '/_authed/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthedProfileRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/routing': {
+      id: '/_authed/routing'
+      path: '/routing'
+      fullPath: '/routing'
+      preLoaderRoute: typeof AuthedRoutingRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/settings': {
+      id: '/_authed/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedSettingsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/users': {
+      id: '/_authed/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthedUsersRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/conversations/': {
+      id: '/_authed/conversations/'
+      path: '/'
+      fullPath: '/conversations/'
+      preLoaderRoute: typeof AuthedConversationsIndexRouteImport
+      parentRoute: typeof AuthedConversationsRoute
+    }
+    '/_authed/conversations/$conversationId': {
+      id: '/_authed/conversations/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/conversations/$conversationId'
+      preLoaderRoute: typeof AuthedConversationsConversationIdRouteImport
+      parentRoute: typeof AuthedConversationsRoute
+    }
   }
 }
 
+interface AuthedConversationsRouteChildren {
+  AuthedConversationsConversationIdRoute: typeof AuthedConversationsConversationIdRoute
+  AuthedConversationsIndexRoute: typeof AuthedConversationsIndexRoute
+}
+
+const AuthedConversationsRouteChildren: AuthedConversationsRouteChildren = {
+  AuthedConversationsConversationIdRoute:
+    AuthedConversationsConversationIdRoute,
+  AuthedConversationsIndexRoute: AuthedConversationsIndexRoute,
+}
+
+const AuthedConversationsRouteWithChildren =
+  AuthedConversationsRoute._addFileChildren(AuthedConversationsRouteChildren)
+
+interface AuthedRouteChildren {
+  AuthedConnectionsRoute: typeof AuthedConnectionsRoute
+  AuthedContactsRoute: typeof AuthedContactsRoute
+  AuthedConversationsRoute: typeof AuthedConversationsRouteWithChildren
+  AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedLogsRoute: typeof AuthedLogsRoute
+  AuthedProfileRoute: typeof AuthedProfileRoute
+  AuthedRoutingRoute: typeof AuthedRoutingRoute
+  AuthedSettingsRoute: typeof AuthedSettingsRoute
+  AuthedUsersRoute: typeof AuthedUsersRoute
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedConnectionsRoute: AuthedConnectionsRoute,
+  AuthedContactsRoute: AuthedContactsRoute,
+  AuthedConversationsRoute: AuthedConversationsRouteWithChildren,
+  AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedLogsRoute: AuthedLogsRoute,
+  AuthedProfileRoute: AuthedProfileRoute,
+  AuthedRoutingRoute: AuthedRoutingRoute,
+  AuthedSettingsRoute: AuthedSettingsRoute,
+  AuthedUsersRoute: AuthedUsersRoute,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

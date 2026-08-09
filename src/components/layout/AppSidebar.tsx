@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface NavItem {
+  // typed by TanStack Router link paths
   to: string;
   label: string;
   icon: LucideIcon;

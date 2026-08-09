@@ -32,7 +32,7 @@ export function ConversationList({
 }: {
   items: ConversationListItem[];
   loading: boolean;
-  selectedId?: string;
+  selectedId?: string | undefined;
   onSelect: (id: string) => void;
   scope: NonNullable<ConversationFilters["scope"]>;
   onScopeChange: (scope: NonNullable<ConversationFilters["scope"]>) => void;

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedConversationsRouteImport } from './routes/_authed.conversations'
+import { Route as AuthedDashboardRouteImport } from './routes/_authed.dashboard'
 import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed.conversations.$conversationId'
 
@@ -35,6 +36,11 @@ const AuthedConversationsRoute = AuthedConversationsRouteImport.update({
   path: '/conversations',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedConversationsIndexRoute =
   AuthedConversationsIndexRouteImport.update({
     id: '/',
@@ -52,12 +58,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/conversations': typeof AuthedConversationsRouteWithChildren
+  '/dashboard': typeof AuthedDashboardRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations/': typeof AuthedConversationsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/dashboard': typeof AuthedDashboardRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations': typeof AuthedConversationsIndexRoute
 }
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/conversations': typeof AuthedConversationsRouteWithChildren
+  '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/conversations/': typeof AuthedConversationsIndexRoute
 }
@@ -76,16 +85,23 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/conversations'
+    | '/dashboard'
     | '/conversations/$conversationId'
     | '/conversations/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/conversations/$conversationId' | '/conversations'
+  to:
+    | '/'
+    | '/login'
+    | '/dashboard'
+    | '/conversations/$conversationId'
+    | '/conversations'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/login'
     | '/_authed/conversations'
+    | '/_authed/dashboard'
     | '/_authed/conversations/$conversationId'
     | '/_authed/conversations/'
   fileRoutesById: FileRoutesById
@@ -126,6 +142,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedConversationsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/dashboard': {
+      id: '/_authed/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthedDashboardRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/conversations/': {
       id: '/_authed/conversations/'
       path: '/'
@@ -159,10 +182,12 @@ const AuthedConversationsRouteWithChildren =
 
 interface AuthedRouteChildren {
   AuthedConversationsRoute: typeof AuthedConversationsRouteWithChildren
+  AuthedDashboardRoute: typeof AuthedDashboardRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedConversationsRoute: AuthedConversationsRouteWithChildren,
+  AuthedDashboardRoute: AuthedDashboardRoute,
 }
 
 const AuthedRouteWithChildren =

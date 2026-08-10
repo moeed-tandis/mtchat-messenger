@@ -1,6 +1,7 @@
 import type { Message } from "@/types";
 import { ApiError, delay } from "../client";
 import { contacts, conversations, messageLogs, messages, uid } from "../mock/db";
+import { sendToRubika } from "./rubika";
 
 /** GET /api/conversations/:id/messages */
 export async function listMessages(conversationId: string, limit = 50): Promise<Message[]> {
@@ -41,10 +42,20 @@ export async function sendMessage(input: SendMessageInput): Promise<Message> {
   };
   messages.push(message);
 
-  await delay(600);
+  // Forward to the real Rubika account through the worker bridge.
+  let bridgeError = false;
+  if (contact?.rubikaId) {
+    try {
+      await sendToRubika(contact.rubikaId, input.text);
+    } catch {
+      bridgeError = true;
+    }
+  }
+
+  await delay(300);
 
   // Simulated upstream failure for a deterministic error state.
-  const failed = input.text.trim() === "!fail";
+  const failed = bridgeError || input.text.trim() === "!fail";
   message.status = failed ? "FAILED" : "SENT";
 
   if (!failed) {

@@ -1,4 +1,5 @@
 import type { Message } from "@/types";
+import { getBridgeState, ingestRubikaMessage } from "../api/rubika";
 import { pushInboundMessage } from "../api/conversations";
 import { pushNotification } from "../api/notifications";
 import { contacts, conversations, uid } from "../mock/db";
@@ -34,6 +35,9 @@ const INBOUND_SAMPLES = [
 class RealtimeService {
   private handlers = new Set<Handler>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  private bridgeTimer: ReturnType<typeof setInterval> | null = null;
+  private bridgeSeq = 0;
+  private bridgeOnline = false;
   private refCount = 0;
 
   subscribe(handler: Handler) {
@@ -74,15 +78,47 @@ class RealtimeService {
     this.emit({ type: "conversation.updated", payload: { conversationId: target.id } });
   }
 
+  /** True while the Rubika worker is delivering real messages. */
+  isBridgeOnline() {
+    return this.bridgeOnline;
+  }
+
+  /** Pulls real Rubika messages from the server bridge and ingests them. */
+  private async pollBridge() {
+    try {
+      const { status, messages } = await getBridgeState(this.bridgeSeq);
+      this.bridgeOnline = status.state === "CONNECTED";
+      for (const item of messages) {
+        this.bridgeSeq = Math.max(this.bridgeSeq, item.seq);
+        const message = ingestRubikaMessage(item);
+        if (!message) continue;
+        this.emit({ type: "message.created", payload: message });
+        this.emit({
+          type: "conversation.updated",
+          payload: { conversationId: message.conversationId },
+        });
+      }
+    } catch {
+      this.bridgeOnline = false;
+    }
+  }
+
   private connect() {
     if (this.timer || typeof window === "undefined") return;
-    // Mock transport: replace with `new WebSocket(...)` when the backend exists.
-    this.timer = setInterval(() => this.simulateInbound(), 45_000);
+    // Real transport: polls the server bridge fed by the rubpy worker.
+    void this.pollBridge();
+    this.bridgeTimer = setInterval(() => void this.pollBridge(), 3_000);
+    // Demo transport: only fires while no real Rubika account is connected.
+    this.timer = setInterval(() => {
+      if (!this.bridgeOnline) this.simulateInbound();
+    }, 45_000);
   }
 
   private disconnect() {
     if (this.timer) clearInterval(this.timer);
+    if (this.bridgeTimer) clearInterval(this.bridgeTimer);
     this.timer = null;
+    this.bridgeTimer = null;
   }
 }
 

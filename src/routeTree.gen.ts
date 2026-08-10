@@ -19,6 +19,7 @@ import { Route as AuthedDashboardRouteImport } from './routes/_authed.dashboard'
 import { Route as AuthedLogsRouteImport } from './routes/_authed.logs'
 import { Route as AuthedProfileRouteImport } from './routes/_authed.profile'
 import { Route as AuthedRoutingRouteImport } from './routes/_authed.routing'
+import { Route as AuthedRubikaRouteImport } from './routes/_authed.rubika'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed.settings'
 import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
 import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
@@ -76,6 +77,11 @@ const AuthedRoutingRoute = AuthedRoutingRouteImport.update({
   path: '/routing',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedRubikaRoute = AuthedRubikaRouteImport.update({
+  id: '/rubika',
+  path: '/rubika',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/logs': typeof AuthedLogsRoute
   '/profile': typeof AuthedProfileRoute
   '/routing': typeof AuthedRoutingRoute
+  '/rubika': typeof AuthedRubikaRoute
   '/settings': typeof AuthedSettingsRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/logs': typeof AuthedLogsRoute
   '/profile': typeof AuthedProfileRoute
   '/routing': typeof AuthedRoutingRoute
+  '/rubika': typeof AuthedRubikaRoute
   '/settings': typeof AuthedSettingsRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/_authed/logs': typeof AuthedLogsRoute
   '/_authed/profile': typeof AuthedProfileRoute
   '/_authed/routing': typeof AuthedRoutingRoute
+  '/_authed/rubika': typeof AuthedRubikaRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/users': typeof AuthedUsersRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/profile'
     | '/routing'
+    | '/rubika'
     | '/settings'
     | '/users'
     | '/conversations/$conversationId'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/profile'
     | '/routing'
+    | '/rubika'
     | '/settings'
     | '/users'
     | '/conversations/$conversationId'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/_authed/logs'
     | '/_authed/profile'
     | '/_authed/routing'
+    | '/_authed/rubika'
     | '/_authed/settings'
     | '/_authed/users'
     | '/_authed/conversations/$conversationId'
@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRoutingRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/rubika': {
+      id: '/_authed/rubika'
+      path: '/rubika'
+      fullPath: '/rubika'
+      preLoaderRoute: typeof AuthedRubikaRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -381,6 +400,7 @@ interface AuthedRouteChildren {
   AuthedLogsRoute: typeof AuthedLogsRoute
   AuthedProfileRoute: typeof AuthedProfileRoute
   AuthedRoutingRoute: typeof AuthedRoutingRoute
+  AuthedRubikaRoute: typeof AuthedRubikaRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedUsersRoute: typeof AuthedUsersRoute
 }
@@ -393,6 +413,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedLogsRoute: AuthedLogsRoute,
   AuthedProfileRoute: AuthedProfileRoute,
   AuthedRoutingRoute: AuthedRoutingRoute,
+  AuthedRubikaRoute: AuthedRubikaRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedUsersRoute: AuthedUsersRoute,
 }

@@ -24,6 +24,7 @@ import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
 import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed.conversations.$conversationId'
 import { Route as ApiPublicRubikaInboundRouteImport } from './routes/api/public/rubika/inbound'
+import { Route as ApiPublicRubikaOutboxRouteImport } from './routes/api/public/rubika/outbox'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -101,6 +102,11 @@ const ApiPublicRubikaInboundRoute = ApiPublicRubikaInboundRouteImport.update({
   path: '/api/public/rubika/inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRubikaOutboxRoute = ApiPublicRubikaOutboxRouteImport.update({
+  id: '/api/public/rubika/outbox',
+  path: '/api/public/rubika/outbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations/': typeof AuthedConversationsIndexRoute
   '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
+  '/api/public/rubika/outbox': typeof ApiPublicRubikaOutboxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations': typeof AuthedConversationsIndexRoute
   '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
+  '/api/public/rubika/outbox': typeof ApiPublicRubikaOutboxRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/conversations/': typeof AuthedConversationsIndexRoute
   '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
+  '/api/public/rubika/outbox': typeof ApiPublicRubikaOutboxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/conversations/$conversationId'
     | '/conversations/'
     | '/api/public/rubika/inbound'
+    | '/api/public/rubika/outbox'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/conversations/$conversationId'
     | '/conversations'
     | '/api/public/rubika/inbound'
+    | '/api/public/rubika/outbox'
   id:
     | '__root__'
     | '/'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/_authed/conversations/$conversationId'
     | '/_authed/conversations/'
     | '/api/public/rubika/inbound'
+    | '/api/public/rubika/outbox'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiPublicRubikaInboundRoute: typeof ApiPublicRubikaInboundRoute
+  ApiPublicRubikaOutboxRoute: typeof ApiPublicRubikaOutboxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -316,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicRubikaInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/rubika/outbox': {
+      id: '/api/public/rubika/outbox'
+      path: '/api/public/rubika/outbox'
+      fullPath: '/api/public/rubika/outbox'
+      preLoaderRoute: typeof ApiPublicRubikaOutboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -365,6 +385,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiPublicRubikaInboundRoute: ApiPublicRubikaInboundRoute,
+  ApiPublicRubikaOutboxRoute: ApiPublicRubikaOutboxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -39,8 +39,8 @@ export interface MockCredential {
 export const users: User[] = [
   {
     id: "u_admin",
-    fullName: "مدیر سیستم",
-    username: "admin",
+    fullName: "معید (مدیر ارشد)",
+    username: "moeed",
     role: "SUPER_ADMIN",
     status: "ACTIVE",
     lastLoginAt: iso(12),
@@ -85,7 +85,7 @@ export const users: User[] = [
 ];
 
 export const credentials: MockCredential[] = [
-  { username: "admin", password: "admin123", userId: "u_admin" },
+  { username: "moeed", password: "Modern@35043", userId: "u_admin" },
   { username: "ali", password: "ali123", userId: "u_ali" },
   { username: "reza", password: "reza123", userId: "u_reza" },
   { username: "mehdi", password: "mehdi123", userId: "u_mehdi" },

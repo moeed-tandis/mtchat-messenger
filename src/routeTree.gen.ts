@@ -23,6 +23,7 @@ import { Route as AuthedSettingsRouteImport } from './routes/_authed.settings'
 import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
 import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed.conversations.$conversationId'
+import { Route as ApiPublicRubikaInboundRouteImport } from './routes/api/public/rubika/inbound'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -95,6 +96,11 @@ const AuthedConversationsConversationIdRoute =
     path: '/$conversationId',
     getParentRoute: () => AuthedConversationsRoute,
   } as any)
+const ApiPublicRubikaInboundRoute = ApiPublicRubikaInboundRouteImport.update({
+  id: '/api/public/rubika/inbound',
+  path: '/api/public/rubika/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations/': typeof AuthedConversationsIndexRoute
+  '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/conversations': typeof AuthedConversationsIndexRoute
+  '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_authed/users': typeof AuthedUsersRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
   '/_authed/conversations/': typeof AuthedConversationsIndexRoute
+  '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/conversations/$conversationId'
     | '/conversations/'
+    | '/api/public/rubika/inbound'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/conversations/$conversationId'
     | '/conversations'
+    | '/api/public/rubika/inbound'
   id:
     | '__root__'
     | '/'
@@ -188,12 +199,14 @@ export interface FileRouteTypes {
     | '/_authed/users'
     | '/_authed/conversations/$conversationId'
     | '/_authed/conversations/'
+    | '/api/public/rubika/inbound'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiPublicRubikaInboundRoute: typeof ApiPublicRubikaInboundRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -296,6 +309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedConversationsConversationIdRouteImport
       parentRoute: typeof AuthedConversationsRoute
     }
+    '/api/public/rubika/inbound': {
+      id: '/api/public/rubika/inbound'
+      path: '/api/public/rubika/inbound'
+      fullPath: '/api/public/rubika/inbound'
+      preLoaderRoute: typeof ApiPublicRubikaInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -344,17 +364,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiPublicRubikaInboundRoute: ApiPublicRubikaInboundRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

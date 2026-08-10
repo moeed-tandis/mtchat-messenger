@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authed/rubika")({
     ],
   }),
   component: () => (
-    <RequireRole role="SUPER_ADMIN">
+    <RequireRole permission="settings.manage">
       <RubikaPage />
     </RequireRole>
   ),

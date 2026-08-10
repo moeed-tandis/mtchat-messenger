@@ -19,10 +19,14 @@ import { Route as AuthedDashboardRouteImport } from './routes/_authed.dashboard'
 import { Route as AuthedLogsRouteImport } from './routes/_authed.logs'
 import { Route as AuthedProfileRouteImport } from './routes/_authed.profile'
 import { Route as AuthedRoutingRouteImport } from './routes/_authed.routing'
+import { Route as AuthedRubikaRouteImport } from './routes/_authed.rubika'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed.settings'
 import { Route as AuthedUsersRouteImport } from './routes/_authed.users'
 import { Route as AuthedConversationsIndexRouteImport } from './routes/_authed.conversations.index'
 import { Route as AuthedConversationsConversationIdRouteImport } from './routes/_authed.conversations.$conversationId'
+import { Route as ApiRubikaStateRouteImport } from './routes/api/rubika/state'
+import { Route as ApiPublicRubikaInboundRouteImport } from './routes/api/public/rubika/inbound'
+import { Route as ApiPublicRubikaOutboxRouteImport } from './routes/api/public/rubika/outbox'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -73,6 +77,11 @@ const AuthedRoutingRoute = AuthedRoutingRouteImport.update({
   path: '/routing',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedRubikaRoute = AuthedRubikaRouteImport.update({
+  id: '/rubika',
+  path: '/rubika',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -95,6 +104,21 @@ const AuthedConversationsConversationIdRoute =
     path: '/$conversationId',
     getParentRoute: () => AuthedConversationsRoute,
   } as any)
+const ApiRubikaStateRoute = ApiRubikaStateRouteImport.update({
+  id: '/api/rubika/state',
+  path: '/api/rubika/state',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRubikaInboundRoute = ApiPublicRubikaInboundRouteImport.update({
+  id: '/api/public/rubika/inbound',
+  path: '/api/public/rubika/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicRubikaOutboxRoute = ApiPublicRubikaOutboxRouteImport.update({
+  id: '/api/public/rubika/outbox',
+  path: '/api/public/rubika/outbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -106,10 +130,14 @@ export interface FileRoutesByFullPath {
   '/logs': typeof AuthedLogsRoute
   '/profile': typeof AuthedProfileRoute
   '/routing': typeof AuthedRoutingRoute
+  '/rubika': typeof AuthedRubikaRoute
   '/settings': typeof AuthedSettingsRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/api/rubika/state': typeof ApiRubikaStateRoute
   '/conversations/': typeof AuthedConversationsIndexRoute
+  '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
+  '/api/public/rubika/outbox': typeof ApiPublicRubikaOutboxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -120,10 +148,14 @@ export interface FileRoutesByTo {
   '/logs': typeof AuthedLogsRoute
   '/profile': typeof AuthedProfileRoute
   '/routing': typeof AuthedRoutingRoute
+  '/rubika': typeof AuthedRubikaRoute
   '/settings': typeof AuthedSettingsRoute
   '/users': typeof AuthedUsersRoute
   '/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/api/rubika/state': typeof ApiRubikaStateRoute
   '/conversations': typeof AuthedConversationsIndexRoute
+  '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
+  '/api/public/rubika/outbox': typeof ApiPublicRubikaOutboxRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -137,10 +169,14 @@ export interface FileRoutesById {
   '/_authed/logs': typeof AuthedLogsRoute
   '/_authed/profile': typeof AuthedProfileRoute
   '/_authed/routing': typeof AuthedRoutingRoute
+  '/_authed/rubika': typeof AuthedRubikaRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/users': typeof AuthedUsersRoute
   '/_authed/conversations/$conversationId': typeof AuthedConversationsConversationIdRoute
+  '/api/rubika/state': typeof ApiRubikaStateRoute
   '/_authed/conversations/': typeof AuthedConversationsIndexRoute
+  '/api/public/rubika/inbound': typeof ApiPublicRubikaInboundRoute
+  '/api/public/rubika/outbox': typeof ApiPublicRubikaOutboxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -154,10 +190,14 @@ export interface FileRouteTypes {
     | '/logs'
     | '/profile'
     | '/routing'
+    | '/rubika'
     | '/settings'
     | '/users'
     | '/conversations/$conversationId'
+    | '/api/rubika/state'
     | '/conversations/'
+    | '/api/public/rubika/inbound'
+    | '/api/public/rubika/outbox'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -168,10 +208,14 @@ export interface FileRouteTypes {
     | '/logs'
     | '/profile'
     | '/routing'
+    | '/rubika'
     | '/settings'
     | '/users'
     | '/conversations/$conversationId'
+    | '/api/rubika/state'
     | '/conversations'
+    | '/api/public/rubika/inbound'
+    | '/api/public/rubika/outbox'
   id:
     | '__root__'
     | '/'
@@ -184,16 +228,23 @@ export interface FileRouteTypes {
     | '/_authed/logs'
     | '/_authed/profile'
     | '/_authed/routing'
+    | '/_authed/rubika'
     | '/_authed/settings'
     | '/_authed/users'
     | '/_authed/conversations/$conversationId'
+    | '/api/rubika/state'
     | '/_authed/conversations/'
+    | '/api/public/rubika/inbound'
+    | '/api/public/rubika/outbox'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiRubikaStateRoute: typeof ApiRubikaStateRoute
+  ApiPublicRubikaInboundRoute: typeof ApiPublicRubikaInboundRoute
+  ApiPublicRubikaOutboxRoute: typeof ApiPublicRubikaOutboxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -268,6 +319,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRoutingRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/rubika': {
+      id: '/_authed/rubika'
+      path: '/rubika'
+      fullPath: '/rubika'
+      preLoaderRoute: typeof AuthedRubikaRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -296,6 +354,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedConversationsConversationIdRouteImport
       parentRoute: typeof AuthedConversationsRoute
     }
+    '/api/rubika/state': {
+      id: '/api/rubika/state'
+      path: '/api/rubika/state'
+      fullPath: '/api/rubika/state'
+      preLoaderRoute: typeof ApiRubikaStateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/rubika/inbound': {
+      id: '/api/public/rubika/inbound'
+      path: '/api/public/rubika/inbound'
+      fullPath: '/api/public/rubika/inbound'
+      preLoaderRoute: typeof ApiPublicRubikaInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/rubika/outbox': {
+      id: '/api/public/rubika/outbox'
+      path: '/api/public/rubika/outbox'
+      fullPath: '/api/public/rubika/outbox'
+      preLoaderRoute: typeof ApiPublicRubikaOutboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -321,6 +400,7 @@ interface AuthedRouteChildren {
   AuthedLogsRoute: typeof AuthedLogsRoute
   AuthedProfileRoute: typeof AuthedProfileRoute
   AuthedRoutingRoute: typeof AuthedRoutingRoute
+  AuthedRubikaRoute: typeof AuthedRubikaRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedUsersRoute: typeof AuthedUsersRoute
 }
@@ -333,6 +413,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedLogsRoute: AuthedLogsRoute,
   AuthedProfileRoute: AuthedProfileRoute,
   AuthedRoutingRoute: AuthedRoutingRoute,
+  AuthedRubikaRoute: AuthedRubikaRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedUsersRoute: AuthedUsersRoute,
 }
@@ -344,6 +425,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiRubikaStateRoute: ApiRubikaStateRoute,
+  ApiPublicRubikaInboundRoute: ApiPublicRubikaInboundRoute,
+  ApiPublicRubikaOutboxRoute: ApiPublicRubikaOutboxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -77,13 +77,14 @@ export const updateUserAccount = createServerFn({ method: "POST" })
     );
     await requireSuperAdmin(context.userId);
 
-    const patch: Record<string, unknown> = {};
-    if (data.fullName !== undefined) patch['full_name'] = data.fullName;
-    if (data.status !== undefined) patch['status'] = data.status;
+    const patch: { full_name?: string; status?: "ACTIVE" | "DISABLED" } = {};
+    if (data.fullName !== undefined) patch.full_name = data.fullName;
+    if (data.status !== undefined) patch.status = data.status;
     if (Object.keys(patch).length) {
       const { error } = await admin.from("profiles").update(patch).eq("id", data.id);
       if (error) throw error;
     }
+
 
     if (data.role) {
       await admin.from("user_roles").delete().eq("user_id", data.id);

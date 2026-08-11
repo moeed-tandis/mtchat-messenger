@@ -82,9 +82,14 @@ export const sendMessage = createServerFn({ method: "POST" })
         .eq("id", contact.id);
     }
 
+    const { data: counters } = await admin
+      .from("bridge_state")
+      .select("outbound_count")
+      .eq("id", 1)
+      .maybeSingle();
     await admin
       .from("bridge_state")
-      .update({ outbound_count: await nextOutbound(admin) })
+      .update({ outbound_count: (counters?.outbound_count ?? 0) + 1 })
       .eq("id", 1);
 
     await logMessage({
@@ -103,13 +108,6 @@ export const sendMessage = createServerFn({ method: "POST" })
 
     return { ...message, status };
   });
-
-async function nextOutbound(admin: { from: (t: "bridge_state") => never }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const client = admin as any;
-  const { data } = await client.from("bridge_state").select("outbound_count").eq("id", 1).maybeSingle();
-  return (data?.outbound_count ?? 0) + 1;
-}
 
 /** Re-queues a failed or pending outbound message. */
 export const retryMessage = createServerFn({ method: "POST" })

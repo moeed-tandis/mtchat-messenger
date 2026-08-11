@@ -200,17 +200,18 @@ export async function queueCommand(type: string, value?: string | null) {
 
 export interface InboundPayload {
   chatGuid: string;
-  chatTitle?: string;
-  username?: string | null;
-  phone?: string | null;
-  avatarUrl?: string | null;
-  messageId?: string | null;
-  type?: string;
-  text?: string;
-  fileName?: string | null;
-  isMe?: boolean;
-  createdAt?: string;
+  chatTitle?: string | undefined;
+  username?: string | null | undefined;
+  phone?: string | null | undefined;
+  avatarUrl?: string | null | undefined;
+  messageId?: string | null | undefined;
+  type?: string | undefined;
+  text?: string | undefined;
+  fileName?: string | null | undefined;
+  isMe?: boolean | undefined;
+  createdAt?: string | undefined;
 }
+
 
 /**
  * Maps a raw Rubika chat + message into the internal contact / conversation /

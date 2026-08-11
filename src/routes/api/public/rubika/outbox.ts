@@ -1,55 +1,46 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { drainWork, secretMatches, setStatus } from "@/lib/rubika-bridge";
 
 /**
- * The rubpy worker long-polls this endpoint (every ~2s) to pick up
- * outgoing messages and account commands (login / code / logout).
+ * The Rubika connector worker long-polls this endpoint to pick up outgoing
+ * messages and account commands queued by the panel.
  */
 export const Route = createFileRoute("/api/public/rubika/outbox")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const expected = process.env["RUBIKA_BRIDGE_SECRET"];
-        if (!secretMatches(request.headers.get("x-bridge-secret"), expected)) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        return Response.json(drainWork());
-      },
-      /** Worker heartbeat / status report. */
-      POST: async ({ request }) => {
-        const expected = process.env["RUBIKA_BRIDGE_SECRET"];
-        if (!secretMatches(request.headers.get("x-bridge-secret"), expected)) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        let body: Record<string, unknown> = {};
+        const { admin, assertBridgeToken } = await import("@/lib/mtchat.server");
         try {
-          body = (await request.json()) as Record<string, unknown>;
-        } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
+          await assertBridgeToken(request);
+        } catch (response) {
+          return response instanceof Response ? response : new Response("Unauthorized", { status: 401 });
         }
-        setStatus({
-          ...(typeof body["state"] === "string"
-            ? { state: body["state"] as never }
-            : {}),
-          ...(typeof body["guid"] === "string" ? { guid: body["guid"] } : {}),
-          ...(typeof body["phone"] === "string" ? { phone: body["phone"] } : {}),
-          error: typeof body["error"] === "string" ? body["error"] : null,
-          ...(Array.isArray(body["chats"])
-            ? {
-                chats: (body["chats"] as Record<string, unknown>[]).flatMap((c) =>
-                  typeof c?.["guid"] === "string"
-                    ? [
-                        {
-                          guid: c["guid"] as string,
-                          title: typeof c["title"] === "string" ? (c["title"] as string) : "",
-                        },
-                      ]
-                    : [],
-                ),
-              }
-            : {}),
+
+        const { data: jobs, error } = await admin
+          .from("bridge_outbox")
+          .select("*")
+          .is("delivered_at", null)
+          .order("created_at", { ascending: true })
+          .limit(25);
+        if (error) return Response.json({ error: "db_error" }, { status: 500 });
+
+        const ids = (jobs ?? []).map((job) => job.id);
+        if (ids.length) {
+          await admin
+            .from("bridge_outbox")
+            .update({ delivered_at: new Date().toISOString() })
+            .in("id", ids);
+        }
+
+        return Response.json({
+          jobs: (jobs ?? []).map((job) => ({
+            id: job.id,
+            kind: job.kind,
+            chatGuid: job.chat_guid,
+            text: job.text,
+            commandType: job.command_type,
+            commandValue: job.command_value,
+          })),
         });
-        return Response.json({ ok: true });
       },
     },
   },

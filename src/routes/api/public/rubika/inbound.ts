@@ -1,61 +1,108 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { addInbound, secretMatches, setStatus } from "@/lib/rubika-bridge";
+import { z } from "zod";
+
+const messageSchema = z.object({
+  chatGuid: z.string().min(1),
+  chatTitle: z.string().optional(),
+  username: z.string().nullish(),
+  phone: z.string().nullish(),
+  avatarUrl: z.string().url().nullish(),
+  messageId: z.string().nullish(),
+  type: z.string().optional(),
+  text: z.string().optional(),
+  fileName: z.string().nullish(),
+  isMe: z.boolean().optional(),
+  createdAt: z.string().optional(),
+});
+
+const bodySchema = z.object({
+  status: z
+    .object({
+      state: z.enum([
+        "OFFLINE",
+        "CONNECTING",
+        "AWAITING_PHONE",
+        "AWAITING_CODE",
+        "AWAITING_PASSWORD",
+        "CONNECTED",
+        "ERROR",
+      ]),
+      guid: z.string().nullish(),
+      phone: z.string().nullish(),
+      error: z.string().nullish(),
+      chats: z
+        .array(z.object({ guid: z.string(), title: z.string(), avatarUrl: z.string().nullish() }))
+        .optional(),
+    })
+    .optional(),
+  messages: z.array(messageSchema).max(50).optional(),
+});
 
 /**
- * The rubpy worker POSTs every new Rubika message here.
- *
- * curl -X POST https://<app>/api/public/rubika/inbound \
- *   -H "x-bridge-secret: $RUBIKA_BRIDGE_SECRET" \
- *   -H "content-type: application/json" \
- *   -d '{"messages":[{"chatGuid":"u0...","chatTitle":"محمد","authorGuid":"u0...",
- *        "messageId":"123","type":"Text","text":"سلام","isMe":false,
- *        "createdAt":"2026-08-10T00:00:00.000Z"}]}'
+ * The Rubika connector worker posts its live status and any new messages here.
+ * Authenticated with the connection token shown on the Rubika page.
  */
 export const Route = createFileRoute("/api/public/rubika/inbound")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const expected = process.env["RUBIKA_BRIDGE_SECRET"];
-        if (!secretMatches(request.headers.get("x-bridge-secret"), expected)) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-
-        let body: unknown;
+        const { admin, assertBridgeToken, ingestInbound } = await import("@/lib/mtchat.server");
         try {
-          body = await request.json();
+          await assertBridgeToken(request);
+        } catch (response) {
+          return response instanceof Response ? response : new Response("Unauthorized", { status: 401 });
+        }
+
+        let body: z.infer<typeof bodySchema>;
+        try {
+          body = bodySchema.parse(await request.json());
         } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
+          return Response.json({ error: "invalid_payload" }, { status: 400 });
         }
 
-        const raw = (body as { messages?: unknown }).messages;
-        if (!Array.isArray(raw) || raw.length > 200) {
-          return Response.json({ error: "invalid_messages" }, { status: 400 });
+        const now = new Date().toISOString();
+        if (body.status) {
+          await admin
+            .from("bridge_state")
+            .update({
+              state: body.status.state,
+              guid: body.status.guid ?? null,
+              phone: body.status.phone ?? null,
+              error: body.status.error ?? null,
+              chats: (body.status.chats ?? []) as never,
+              last_heartbeat_at: now,
+              updated_at: now,
+            })
+            .eq("id", 1);
+        } else {
+          await admin
+            .from("bridge_state")
+            .update({ last_heartbeat_at: now, updated_at: now })
+            .eq("id", 1);
         }
 
-        const items = raw.flatMap((entry) => {
-          if (typeof entry !== "object" || entry === null) return [];
-          const m = entry as Record<string, unknown>;
-          const chatGuid = typeof m["chatGuid"] === "string" ? m["chatGuid"].slice(0, 128) : "";
-          if (!chatGuid) return [];
-          return [
-            {
-              chatGuid,
-              chatTitle: typeof m["chatTitle"] === "string" ? m["chatTitle"].slice(0, 120) : chatGuid,
-              authorGuid: typeof m["authorGuid"] === "string" ? m["authorGuid"].slice(0, 128) : "",
-              messageId: typeof m["messageId"] === "string" ? m["messageId"].slice(0, 64) : "",
-              type: typeof m["type"] === "string" ? m["type"].slice(0, 24) : "Text",
-              text: typeof m["text"] === "string" ? m["text"].slice(0, 4000) : "",
-              ...(typeof m["fileName"] === "string" ? { fileName: m["fileName"].slice(0, 200) } : {}),
-              isMe: Boolean(m["isMe"]),
-              createdAt:
-                typeof m["createdAt"] === "string" ? m["createdAt"] : new Date().toISOString(),
-            },
-          ];
-        });
+        const results: Array<{ conversationId: string; messageId: string | null }> = [];
+        for (const item of body.messages ?? []) {
+          try {
+            results.push(await ingestInbound(item));
+          } catch (error) {
+            console.error("[rubika] ingest failed", error);
+          }
+        }
 
-        const seq = addInbound(items);
-        setStatus({ state: "CONNECTED", error: null });
-        return Response.json({ ok: true, accepted: items.length, seq });
+        if (results.length) {
+          const { data: counters } = await admin
+            .from("bridge_state")
+            .select("inbound_count")
+            .eq("id", 1)
+            .maybeSingle();
+          await admin
+            .from("bridge_state")
+            .update({ inbound_count: (counters?.inbound_count ?? 0) + results.length })
+            .eq("id", 1);
+        }
+
+        return Response.json({ ok: true, ingested: results.length });
       },
     },
   },

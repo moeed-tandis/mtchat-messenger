@@ -107,11 +107,13 @@ export async function rotateBridgeToken(): Promise<string> {
 export async function assertBridgeToken(request: Request) {
   const provided =
     request.headers.get("x-bridge-token") ??
+    request.headers.get("x-bridge-secret") ??
     new URL(request.url).searchParams.get("token") ??
     "";
   const expected = await getBridgeToken();
   if (!provided || provided !== expected) throw new Response("Unauthorized", { status: 401 });
 }
+
 
 export interface RoutingSettingsValue {
   useLastActiveAgent: boolean;

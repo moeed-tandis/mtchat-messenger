@@ -1,88 +1,105 @@
-import type { Session, User } from "@/types";
-import { ApiError, delay } from "../client";
-import { credentials, securityLogs, uid, users } from "../mock/db";
+import type { Role, Session, User, UserStatus } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { emailForUsername } from "@/lib/username-email";
+import { ensureSuperAdmin } from "@/lib/bootstrap.functions";
+import { recordFailedLogin, recordLogin } from "@/lib/users.functions";
+import { ApiError } from "../client";
 
-const SESSION_KEY = "mtchat.session";
+export interface ProfileRow {
+  id: string;
+  full_name: string;
+  username: string;
+  status: UserStatus;
+  avatar_color: string;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+export function mapProfile(row: ProfileRow, role: Role): User {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    username: row.username,
+    role,
+    status: row.status,
+    lastLoginAt: row.last_login_at,
+    createdAt: row.created_at,
+    avatarColor: row.avatar_color,
+  };
+}
+
+async function loadCurrentUser(userId: string): Promise<User | null> {
+  const [{ data: profile }, { data: roles }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", userId),
+  ]);
+  if (!profile) return null;
+  const role: Role = (roles ?? []).some((r) => r.role === "SUPER_ADMIN") ? "SUPER_ADMIN" : "AGENT";
+  return mapProfile(profile as ProfileRow, role);
+}
 
 /** POST /api/auth/login */
 export async function login(username: string, password: string): Promise<Session> {
-  await delay(500);
-  const cred = credentials.find((c) => c.username === username.trim());
-  if (!cred || cred.password !== password) {
-    securityLogs.unshift({
-      id: uid("sec"),
-      event: "LOGIN_FAILED",
-      userName: username || "-",
-      createdAt: new Date().toISOString(),
-      ip: "192.168.1.10",
-      detail: "نام کاربری یا رمز عبور نامعتبر",
-    });
+  // First run bootstrap: creates the initial super admin if none exists.
+  try {
+    await ensureSuperAdmin();
+  } catch {
+    // Ignore: an existing installation does not need bootstrapping.
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: emailForUsername(username),
+    password,
+  });
+
+  if (error || !data.session || !data.user) {
+    try {
+      await recordFailedLogin({ data: { username: username.trim() } });
+    } catch {
+      /* logging must never block the UI */
+    }
     throw new ApiError("نام کاربری یا رمز عبور اشتباه است.", "invalid_credentials");
   }
-  const user = users.find((u) => u.id === cred.userId)!;
+
+  const user = await loadCurrentUser(data.user.id);
+  if (!user) {
+    await supabase.auth.signOut();
+    throw new ApiError("حساب کاربری شما پیدا نشد.", "not_found");
+  }
   if (user.status === "DISABLED") {
+    await supabase.auth.signOut();
     throw new ApiError("حساب کاربری شما غیرفعال شده است.", "account_disabled");
   }
-  user.lastLoginAt = new Date().toISOString();
-  securityLogs.unshift({
-    id: uid("sec"),
-    event: "LOGIN_SUCCESS",
-    userName: user.fullName,
-    createdAt: new Date().toISOString(),
-    ip: "192.168.1.10",
-    detail: "ورود موفق",
-  });
-  const session: Session = { token: `mock.${user.id}.${Date.now()}`, user };
-  persistSession(session);
-  return session;
+
+  try {
+    await recordLogin();
+  } catch {
+    /* non-blocking */
+  }
+
+  return { token: data.session.access_token, user };
 }
 
 /** POST /api/auth/logout */
 export async function logout(): Promise<void> {
-  const session = readSession();
-  if (session) {
-    securityLogs.unshift({
-      id: uid("sec"),
-      event: "LOGOUT",
-      userName: session.user.fullName,
-      createdAt: new Date().toISOString(),
-      ip: "192.168.1.10",
-      detail: "خروج از حساب",
-    });
-  }
-  clearSession();
-  await delay(120);
+  await supabase.auth.signOut();
 }
 
 /** GET /api/auth/me */
 export async function me(): Promise<User | null> {
-  await delay(80);
-  const session = readSession();
-  if (!session) return null;
-  const fresh = users.find((u) => u.id === session.user.id);
-  if (!fresh || fresh.status === "DISABLED") {
-    clearSession();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return null;
+  const user = await loadCurrentUser(data.user.id);
+  if (!user || user.status === "DISABLED") {
+    if (user?.status === "DISABLED") await supabase.auth.signOut();
     return null;
   }
-  return fresh;
+  return user;
 }
 
-export function readSession(): Session | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Session) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function persistSession(session: Session) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function clearSession() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(SESSION_KEY);
+export function onAuthChange(handler: () => void) {
+  const { data } = supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") handler();
+  });
+  return () => data.subscription.unsubscribe();
 }

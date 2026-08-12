@@ -160,4 +160,7 @@ export function mapMessage(row: MessageRow): Message {
     status: row.status,
     createdAt: row.created_at,
   };
+  if (row.external_message_id) message.externalMessageId = row.external_message_id;
+  return message;
 }
+

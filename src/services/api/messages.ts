@@ -28,7 +28,7 @@ export async function sendMessage(input: SendMessageInput): Promise<Message> {
     const result = await sendMessageFn({
       data: { conversationId: input.conversationId, text: input.text },
     });
-    return mapMessage(result.message as never);
+    return mapMessage(result as never);
   } catch (error) {
     throw new ApiError(
       error instanceof Error && error.message === "bridge_offline"
@@ -41,6 +41,8 @@ export async function sendMessage(input: SendMessageInput): Promise<Message> {
 
 /** POST /api/messages/:id/retry */
 export async function retryMessage(messageId: string): Promise<Message> {
-  const result = await retryMessageFn({ data: { messageId } });
-  return mapMessage(result.message as never);
+  await retryMessageFn({ data: { messageId } });
+  const { data, error } = await supabase.from("messages").select("*").eq("id", messageId).maybeSingle();
+  if (error || !data) throw new ApiError("پیام یافت نشد.", "not_found");
+  return mapMessage(data as never);
 }

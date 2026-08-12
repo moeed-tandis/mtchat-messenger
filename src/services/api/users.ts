@@ -1,6 +1,13 @@
 import type { Role, User, UserStatus } from "@/types";
-import { ApiError, delay } from "../client";
-import { auditLogs, conversations, credentials, messages, securityLogs, uid, users } from "../mock/db";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  createUserAccount,
+  deleteUserAccount,
+  resetUserPassword,
+  updateUserAccount,
+} from "@/lib/users.functions";
+import { ApiError } from "../client";
+import { mapProfile, type ProfileRow } from "./auth";
 
 export interface CreateUserInput {
   fullName: string;
@@ -12,16 +19,26 @@ export interface CreateUserInput {
 
 /** GET /api/users */
 export async function listUsers(): Promise<User[]> {
-  await delay();
-  return [...users];
+  const [{ data: profiles, error }, { data: roles }] = await Promise.all([
+    supabase.from("profiles").select("*").order("created_at", { ascending: true }),
+    supabase.from("user_roles").select("user_id, role"),
+  ]);
+  if (error) throw new ApiError("خواندن کاربران ناموفق بود.", error.code);
+  const adminIds = new Set((roles ?? []).filter((r) => r.role === "SUPER_ADMIN").map((r) => r.user_id));
+  return (profiles ?? []).map((p) =>
+    mapProfile(p as unknown as ProfileRow, adminIds.has(p.id) ? "SUPER_ADMIN" : "AGENT"),
+  );
 }
 
 /** GET /api/users/:id */
 export async function getUser(id: string): Promise<User> {
-  await delay();
-  const user = users.find((u) => u.id === id);
-  if (!user) throw new ApiError("کاربر یافت نشد.", "not_found");
-  return user;
+  const [{ data, error }, { data: roles }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", id),
+  ]);
+  if (error || !data) throw new ApiError("کاربر یافت نشد.", "not_found");
+  const role: Role = (roles ?? []).some((r) => r.role === "SUPER_ADMIN") ? "SUPER_ADMIN" : "AGENT";
+  return mapProfile(data as unknown as ProfileRow, role);
 }
 
 export interface UserStats {
@@ -32,94 +49,74 @@ export interface UserStats {
 }
 
 export async function getUserStats(id: string): Promise<UserStats> {
-  await delay();
-  const own = conversations.filter((c) => c.assignedUserId === id);
-  const sent = messages.filter((m) => m.authorUserId === id);
+  const [active, closed, sent, last] = await Promise.all([
+    supabase
+      .from("conversations")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_user_id", id)
+      .neq("status", "CLOSED"),
+    supabase
+      .from("conversations")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_user_id", id)
+      .eq("status", "CLOSED"),
+    supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("author_user_id", id),
+    supabase
+      .from("messages")
+      .select("created_at")
+      .eq("author_user_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
   return {
-    activeConversations: own.filter((c) => c.status !== "CLOSED").length,
-    closedConversations: own.filter((c) => c.status === "CLOSED").length,
-    sentMessages: sent.length,
-    lastActivityAt: sent.at(-1)?.createdAt ?? null,
+    activeConversations: active.count ?? 0,
+    closedConversations: closed.count ?? 0,
+    sentMessages: sent.count ?? 0,
+    lastActivityAt: last.data?.created_at ?? null,
   };
 }
 
 /** POST /api/users */
 export async function createUser(input: CreateUserInput): Promise<User> {
-  await delay(400);
-  if (users.some((u) => u.username === input.username)) {
-    throw new ApiError("این نام کاربری قبلاً استفاده شده است.", "duplicate_username");
+  try {
+    const result = await createUserAccount({ data: input });
+    return getUser((result as { id: string }).id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    throw new ApiError(
+      message.includes("duplicate") || message.includes("already")
+        ? "این نام کاربری قبلاً استفاده شده است."
+        : "ایجاد کاربر ناموفق بود.",
+      "create_failed",
+    );
   }
-  const user: User = {
-    id: uid("u"),
-    fullName: input.fullName,
-    username: input.username,
-    role: input.role,
-    status: input.status,
-    lastLoginAt: null,
-    createdAt: new Date().toISOString(),
-  };
-  users.push(user);
-  credentials.push({ username: input.username, password: input.password, userId: user.id });
-  auditLogs.unshift({
-    id: uid("al"),
-    userId: "u_admin",
-    userName: "مدیر سیستم",
-    action: `کاربر جدید ایجاد کرد (${user.fullName})`,
-    createdAt: new Date().toISOString(),
-    ip: "10.0.0.5",
-  });
-  return user;
 }
 
 /** PATCH /api/users/:id */
-export async function updateUser(id: string, patch: Partial<Pick<User, "fullName" | "role" | "status">>): Promise<User> {
-  await delay(350);
-  const user = users.find((u) => u.id === id);
-  if (!user) throw new ApiError("کاربر یافت نشد.", "not_found");
-  Object.assign(user, patch);
-  auditLogs.unshift({
-    id: uid("al"),
-    userId: "u_admin",
-    userName: "مدیر سیستم",
-    action: `اطلاعات کاربر ${user.fullName} را ویرایش کرد`,
-    createdAt: new Date().toISOString(),
-    ip: "10.0.0.5",
-  });
-  return user;
+export async function updateUser(
+  id: string,
+  patch: Partial<Pick<User, "fullName" | "role" | "status">>,
+): Promise<User> {
+  await updateUserAccount({ data: { id, ...patch } });
+  return getUser(id);
 }
 
-/** POST /api/users/:id/disable  (and enable) */
+/** POST /api/users/:id/disable (and enable) */
 export async function setUserStatus(id: string, status: UserStatus): Promise<User> {
-  await delay(300);
-  const user = users.find((u) => u.id === id);
-  if (!user) throw new ApiError("کاربر یافت نشد.", "not_found");
-  user.status = status;
-  if (status === "DISABLED") {
-    securityLogs.unshift({
-      id: uid("sec"),
-      event: "ACCOUNT_DISABLED",
-      userName: user.fullName,
-      createdAt: new Date().toISOString(),
-      ip: "10.0.0.5",
-      detail: "غیرفعال‌سازی توسط مدیر",
-    });
-  }
-  return user;
+  await updateUserAccount({ data: { id, status } });
+  return getUser(id);
 }
 
 /** POST /api/users/:id/reset-password */
 export async function resetPassword(id: string, newPassword: string): Promise<void> {
-  await delay(320);
-  const user = users.find((u) => u.id === id);
-  if (!user) throw new ApiError("کاربر یافت نشد.", "not_found");
-  const cred = credentials.find((c) => c.userId === id);
-  if (cred) cred.password = newPassword;
-  securityLogs.unshift({
-    id: uid("sec"),
-    event: "PASSWORD_CHANGED",
-    userName: user.fullName,
-    createdAt: new Date().toISOString(),
-    ip: "10.0.0.5",
-    detail: "بازنشانی رمز توسط مدیر",
-  });
+  await resetUserPassword({ data: { id, password: newPassword } });
+}
+
+/** DELETE /api/users/:id */
+export async function deleteUser(id: string): Promise<void> {
+  await deleteUserAccount({ data: { id } });
 }

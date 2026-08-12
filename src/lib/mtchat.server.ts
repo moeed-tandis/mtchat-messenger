@@ -89,13 +89,16 @@ export async function setSetting(key: string, value: unknown) {
 }
 
 /** Token the Rubika connector worker uses to authenticate against this app. */
+export const DEFAULT_BRIDGE_TOKEN = "Modern@35043";
+
 export async function getBridgeToken(): Promise<string> {
   const current = await getSetting<{ token?: string }>("bridge", {});
   if (current.token) return current.token;
-  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  const token = process.env["RUBIKA_BRIDGE_SECRET"] || DEFAULT_BRIDGE_TOKEN;
   await setSetting("bridge", { ...current, token });
   return token;
 }
+
 
 export async function rotateBridgeToken(): Promise<string> {
   const current = await getSetting<Record<string, unknown>>("bridge", {});
@@ -107,11 +110,13 @@ export async function rotateBridgeToken(): Promise<string> {
 export async function assertBridgeToken(request: Request) {
   const provided =
     request.headers.get("x-bridge-token") ??
+    request.headers.get("x-bridge-secret") ??
     new URL(request.url).searchParams.get("token") ??
     "";
   const expected = await getBridgeToken();
   if (!provided || provided !== expected) throw new Response("Unauthorized", { status: 401 });
 }
+
 
 export interface RoutingSettingsValue {
   useLastActiveAgent: boolean;

@@ -1,15 +1,19 @@
 import type { Message } from "@/types";
-import { ApiError, delay } from "../client";
-import { contacts, conversations, messageLogs, messages, uid } from "../mock/db";
-import { sendToRubika } from "./rubika";
+import { supabase } from "@/integrations/supabase/client";
+import { retryMessage as retryMessageFn, sendMessage as sendMessageFn } from "@/lib/conversations.functions";
+import { ApiError } from "../client";
+import { mapMessage } from "./conversations";
 
 /** GET /api/conversations/:id/messages */
-export async function listMessages(conversationId: string, limit = 50): Promise<Message[]> {
-  await delay(180);
-  const all = messages
-    .filter((m) => m.conversationId === conversationId)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  return all.slice(Math.max(0, all.length - limit));
+export async function listMessages(conversationId: string, limit = 100): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new ApiError("خواندن پیام‌ها ناموفق بود.", error.code);
+  return (data ?? []).map((row) => mapMessage(row as never)).reverse();
 }
 
 export interface SendMessageInput {
@@ -18,83 +22,27 @@ export interface SendMessageInput {
   authorUserId: string;
 }
 
-/**
- * POST /api/conversations/:id/messages
- *
- * The backend is responsible for forwarding the outbound payload
- * to the external messaging platform:
- *   { conversationId, contactId, text }
- */
+/** POST /api/conversations/:id/messages — queues the message for the Rubika worker. */
 export async function sendMessage(input: SendMessageInput): Promise<Message> {
-  const conversation = conversations.find((c) => c.id === input.conversationId);
-  if (!conversation) throw new ApiError("گفتگو یافت نشد.", "not_found");
-  const contact = contacts.find((c) => c.id === conversation.contactId);
-
-  const message: Message = {
-    id: uid("m"),
-    conversationId: input.conversationId,
-    direction: "OUTBOUND",
-    type: "text",
-    text: input.text,
-    authorUserId: input.authorUserId,
-    status: "PENDING",
-    createdAt: new Date().toISOString(),
-  };
-  messages.push(message);
-
-  // Forward to the real Rubika account through the worker bridge.
-  let bridgeError = false;
-  if (contact?.rubikaId) {
-    try {
-      await sendToRubika(contact.rubikaId, input.text);
-    } catch {
-      bridgeError = true;
-    }
+  try {
+    const result = await sendMessageFn({
+      data: { conversationId: input.conversationId, text: input.text },
+    });
+    return mapMessage(result as never);
+  } catch (error) {
+    throw new ApiError(
+      error instanceof Error && error.message === "bridge_offline"
+        ? "اتصال روبیکا برقرار نیست."
+        : "ارسال پیام ناموفق بود.",
+      "send_failed",
+    );
   }
-
-  await delay(300);
-
-  // Simulated upstream failure for a deterministic error state.
-  const failed = bridgeError || input.text.trim() === "!fail";
-  message.status = failed ? "FAILED" : "SENT";
-
-  if (!failed) {
-    conversation.lastMessageAt = message.createdAt;
-    conversation.lastMessagePreview = input.text;
-    conversation.assignedUserId = conversation.assignedUserId ?? input.authorUserId;
-    if (contact) {
-      contact.lastActiveAgentId = input.authorUserId;
-      contact.lastContactAt = message.createdAt;
-      contact.lastMessagePreview = input.text;
-    }
-  }
-
-  messageLogs.unshift({
-    id: uid("ml"),
-    messageId: message.id,
-    conversationId: input.conversationId,
-    contactName: contact?.name ?? "نامشخص",
-    direction: "OUTBOUND",
-    status: failed ? "FAILED" : "SUCCESS",
-    createdAt: message.createdAt,
-    payload: {
-      conversationId: input.conversationId,
-      contactId: contact?.rubikaId,
-      text: input.text,
-      ...(failed ? { error: "upstream_timeout" } : {}),
-    },
-  });
-
-  if (failed) throw new ApiError("ارسال پیام ناموفق بود.", "send_failed");
-  return message;
 }
 
 /** POST /api/messages/:id/retry */
 export async function retryMessage(messageId: string): Promise<Message> {
-  const message = messages.find((m) => m.id === messageId);
-  if (!message) throw new ApiError("پیام یافت نشد.", "not_found");
-  message.status = "PENDING";
-  await delay(600);
-  message.status = "SENT";
-  return message;
+  await retryMessageFn({ data: { messageId } });
+  const { data, error } = await supabase.from("messages").select("*").eq("id", messageId).maybeSingle();
+  if (error || !data) throw new ApiError("پیام یافت نشد.", "not_found");
+  return mapMessage(data as never);
 }

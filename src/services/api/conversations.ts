@@ -1,19 +1,17 @@
 import type { Conversation, ConversationStatus, Message } from "@/types";
-import { ApiError, delay } from "../client";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  auditLogs,
-  contacts,
-  conversations,
-  messageLogs,
-  messages,
-  uid,
-  users,
-} from "../mock/db";
+  assignConversation as assignConversationFn,
+  markConversationRead as markConversationReadFn,
+  setConversationStatus,
+} from "@/lib/conversations.functions";
+import { ApiError } from "../client";
 
 export interface ConversationListItem extends Conversation {
   contactName: string;
   contactPhone: string;
   contactRubikaId: string;
+  contactAvatarUrl: string | null;
   assignedUserName: string | null;
 }
 
@@ -21,19 +19,46 @@ export interface ConversationFilters {
   scope?: "ALL" | "MINE" | "UNREAD" | "OPEN" | "PENDING" | "CLOSED";
   query?: string;
   currentUserId?: string;
-  /** Agents only see their own conversations. */
+  /** Agents only see their own conversations (also enforced by RLS). */
   restrictToUserId?: string;
 }
 
-function decorate(conversation: Conversation): ConversationListItem {
-  const contact = contacts.find((c) => c.id === conversation.contactId);
-  const agent = users.find((u) => u.id === conversation.assignedUserId);
+interface Row {
+  id: string;
+  contact_id: string;
+  assigned_user_id: string | null;
+  status: ConversationStatus;
+  unread_count: number;
+  last_message_at: string;
+  last_message_preview: string;
+  created_at: string;
+  contacts: {
+    name: string;
+    phone: string;
+    rubika_id: string;
+    avatar_url: string | null;
+  } | null;
+  profiles: { full_name: string } | null;
+}
+
+const SELECT =
+  "id, contact_id, assigned_user_id, status, unread_count, last_message_at, last_message_preview, created_at, contacts:contact_id(name, phone, rubika_id, avatar_url), profiles:assigned_user_id(full_name)";
+
+function mapRow(row: Row): ConversationListItem {
   return {
-    ...conversation,
-    contactName: contact?.name ?? "نامشخص",
-    contactPhone: contact?.phone ?? "",
-    contactRubikaId: contact?.rubikaId ?? "",
-    assignedUserName: agent?.fullName ?? null,
+    id: row.id,
+    contactId: row.contact_id,
+    assignedUserId: row.assigned_user_id,
+    status: row.status,
+    unreadCount: row.unread_count,
+    lastMessageAt: row.last_message_at,
+    lastMessagePreview: row.last_message_preview,
+    createdAt: row.created_at,
+    contactName: row.contacts?.name || "نامشخص",
+    contactPhone: row.contacts?.phone ?? "",
+    contactRubikaId: row.contacts?.rubika_id ?? "",
+    contactAvatarUrl: row.contacts?.avatar_url ?? null,
+    assignedUserName: row.profiles?.full_name ?? null,
   };
 }
 
@@ -41,57 +66,52 @@ function decorate(conversation: Conversation): ConversationListItem {
 export async function listConversations(
   filters: ConversationFilters = {},
 ): Promise<ConversationListItem[]> {
-  await delay();
-  let items = conversations.map(decorate);
+  let query = supabase
+    .from("conversations")
+    .select(SELECT)
+    .order("last_message_at", { ascending: false })
+    .limit(200);
 
-  if (filters.restrictToUserId) {
-    items = items.filter((c) => c.assignedUserId === filters.restrictToUserId);
-  }
+  if (filters.restrictToUserId) query = query.eq("assigned_user_id", filters.restrictToUserId);
 
   switch (filters.scope) {
     case "MINE":
-      items = items.filter((c) => c.assignedUserId === filters.currentUserId);
+      if (filters.currentUserId) query = query.eq("assigned_user_id", filters.currentUserId);
       break;
     case "UNREAD":
-      items = items.filter((c) => c.unreadCount > 0);
+      query = query.gt("unread_count", 0);
       break;
     case "OPEN":
-      items = items.filter((c) => c.status === "OPEN");
-      break;
     case "PENDING":
-      items = items.filter((c) => c.status === "PENDING");
-      break;
     case "CLOSED":
-      items = items.filter((c) => c.status === "CLOSED");
+      query = query.eq("status", filters.scope);
       break;
     default:
       break;
   }
 
+  const { data, error } = await query;
+  if (error) throw new ApiError("خواندن گفتگوها ناموفق بود.", error.code);
+  let items = ((data ?? []) as unknown as Row[]).map(mapRow);
+
   const q = (filters.query ?? "").trim().toLowerCase();
   if (q) {
-    items = items.filter((c) => {
-      const inMessages = messages.some(
-        (m) => m.conversationId === c.id && m.text.toLowerCase().includes(q),
-      );
-      return (
+    items = items.filter(
+      (c) =>
         c.contactName.toLowerCase().includes(q) ||
         c.contactPhone.includes(q) ||
         c.contactRubikaId.toLowerCase().includes(q) ||
-        inMessages
-      );
-    });
+        c.lastMessagePreview.toLowerCase().includes(q),
+    );
   }
-
-  return items.sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+  return items;
 }
 
 /** GET /api/conversations/:id */
 export async function getConversation(id: string): Promise<ConversationListItem> {
-  await delay();
-  const conversation = conversations.find((c) => c.id === id);
-  if (!conversation) throw new ApiError("گفتگو یافت نشد.", "not_found");
-  return decorate(conversation);
+  const { data, error } = await supabase.from("conversations").select(SELECT).eq("id", id).maybeSingle();
+  if (error || !data) throw new ApiError("گفتگو یافت نشد.", "not_found");
+  return mapRow(data as unknown as Row);
 }
 
 /** PATCH /api/conversations/:id */
@@ -99,24 +119,8 @@ export async function updateConversationStatus(
   id: string,
   status: ConversationStatus,
 ): Promise<ConversationListItem> {
-  await delay(280);
-  const conversation = conversations.find((c) => c.id === id);
-  if (!conversation) throw new ApiError("گفتگو یافت نشد.", "not_found");
-  conversation.status = status;
-  auditLogs.unshift({
-    id: uid("al"),
-    userId: conversation.assignedUserId ?? "u_admin",
-    userName: users.find((u) => u.id === conversation.assignedUserId)?.fullName ?? "مدیر سیستم",
-    action:
-      status === "CLOSED"
-        ? "گفتگو را بست"
-        : status === "PENDING"
-          ? "گفتگو را به انتظار منتقل کرد"
-          : "گفتگو را باز کرد",
-    createdAt: new Date().toISOString(),
-    ip: "192.168.1.24",
-  });
-  return decorate(conversation);
+  await setConversationStatus({ data: { conversationId: id, status } });
+  return getConversation(id);
 }
 
 /** POST /api/conversations/:id/assign */
@@ -124,69 +128,39 @@ export async function assignConversation(
   id: string,
   userId: string,
 ): Promise<ConversationListItem> {
-  await delay(320);
-  const conversation = conversations.find((c) => c.id === id);
-  if (!conversation) throw new ApiError("گفتگو یافت نشد.", "not_found");
-  conversation.assignedUserId = userId;
-  const contact = contacts.find((c) => c.id === conversation.contactId);
-  if (contact) {
-    contact.assignedUserId = userId;
-    contact.lastActiveAgentId = userId;
-  }
-  auditLogs.unshift({
-    id: uid("al"),
-    userId,
-    userName: users.find((u) => u.id === userId)?.fullName ?? "-",
-    action: "گفتگو به او اختصاص داده شد",
-    createdAt: new Date().toISOString(),
-    ip: "10.0.0.5",
-  });
-  return decorate(conversation);
+  await assignConversationFn({ data: { conversationId: id, userId } });
+  return getConversation(id);
 }
 
 /** POST /api/conversations/:id/read */
 export async function markConversationRead(id: string): Promise<void> {
-  await delay(100);
-  const conversation = conversations.find((c) => c.id === id);
-  if (conversation) conversation.unreadCount = 0;
+  await markConversationReadFn({ data: { conversationId: id } });
 }
 
-/**
- * Simulates a new inbound message arriving from the external platform.
- * The real inbound path is: Rubika -> backend adapter -> realtime event.
- */
-export function pushInboundMessage(conversationId: string, text: string): Message | null {
-  const conversation = conversations.find((c) => c.id === conversationId);
-  if (!conversation) return null;
-  const contact = contacts.find((c) => c.id === conversation.contactId);
+interface MessageRow {
+  id: string;
+  conversation_id: string;
+  external_message_id: string | null;
+  direction: "INBOUND" | "OUTBOUND";
+  type: string;
+  text: string;
+  author_user_id: string | null;
+  status: Message["status"];
+  created_at: string;
+}
+
+export function mapMessage(row: MessageRow): Message {
   const message: Message = {
-    id: uid("m"),
-    conversationId,
-    externalMessageId: `rubika-msg-${Math.floor(Math.random() * 99999)}`,
-    direction: "INBOUND",
-    type: "text",
-    text,
-    status: "SENT",
-    createdAt: new Date().toISOString(),
+    id: row.id,
+    conversationId: row.conversation_id,
+    direction: row.direction,
+    type: (row.type as Message["type"]) ?? "text",
+    text: row.text,
+    authorUserId: row.author_user_id,
+    status: row.status,
+    createdAt: row.created_at,
   };
-  messages.push(message);
-  conversation.unreadCount += 1;
-  conversation.lastMessageAt = message.createdAt;
-  conversation.lastMessagePreview = text;
-  if (contact) contact.lastContactAt = message.createdAt;
-  messageLogs.unshift({
-    id: uid("ml"),
-    messageId: message.id,
-    conversationId,
-    contactName: contact?.name ?? "نامشخص",
-    direction: "INBOUND",
-    status: "SUCCESS",
-    createdAt: message.createdAt,
-    payload: {
-      externalMessageId: message.externalMessageId,
-      contact: { id: contact?.rubikaId, phone: contact?.phone, name: contact?.name },
-      message: { type: "text", text, timestamp: message.createdAt },
-    },
-  });
+  if (row.external_message_id) message.externalMessageId = row.external_message_id;
   return message;
 }
+

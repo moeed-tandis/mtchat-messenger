@@ -150,10 +150,9 @@ interface MessageRow {
 }
 
 export function mapMessage(row: MessageRow): Message {
-  return {
+  const message: Message = {
     id: row.id,
     conversationId: row.conversation_id,
-    externalMessageId: row.external_message_id ?? undefined,
     direction: row.direction,
     type: (row.type as Message["type"]) ?? "text",
     text: row.text,

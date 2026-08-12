@@ -135,12 +135,20 @@ export const Route = createFileRoute("/api/public/rubika/inbound")({
 
         const now = new Date().toISOString();
         const chats = normalizeChats(body.chats ?? body.status?.chats);
-        const patch: Record<string, unknown> = { last_heartbeat_at: now, updated_at: now };
-        if (body.status?.state) patch["state"] = body.status.state;
-        if (body.status?.guid !== undefined) patch["guid"] = body.status.guid ?? null;
-        if (body.status?.phone !== undefined) patch["phone"] = body.status.phone ?? null;
-        if (body.status?.error !== undefined) patch["error"] = body.status.error ?? null;
-        if (chats.length) patch["chats"] = chats;
+        const patch: {
+          last_heartbeat_at: string;
+          updated_at: string;
+          state?: string;
+          guid?: string | null;
+          phone?: string | null;
+          error?: string | null;
+          chats?: never;
+        } = { last_heartbeat_at: now, updated_at: now };
+        if (body.status?.state) patch.state = body.status.state;
+        if (body.status?.guid !== undefined) patch.guid = body.status.guid ?? null;
+        if (body.status?.phone !== undefined) patch.phone = body.status.phone ?? null;
+        if (body.status?.error !== undefined) patch.error = body.status.error ?? null;
+        if (chats.length) patch.chats = chats as never;
         await admin.from("bridge_state").update(patch).eq("id", 1);
 
         let ingested = 0;

@@ -21,6 +21,10 @@ export const Route = createFileRoute("/api/public/rubika/outbox")({
         let body: {
           status?: { state?: string; guid?: string | null; phone?: string | null; error?: string | null };
           chats?: unknown[];
+          state?: string;
+          guid?: string | null;
+          phone?: string | null;
+          error?: string | null;
         } = {};
         try {
           body = (await request.json()) as typeof body;
@@ -37,10 +41,18 @@ export const Route = createFileRoute("/api/public/rubika/outbox")({
           error?: string | null;
           chats?: never;
         } = { last_heartbeat_at: now, updated_at: now };
-        if (body.status?.state) patch.state = body.status.state;
-        if (body.status?.guid !== undefined) patch.guid = body.status.guid ?? null;
-        if (body.status?.phone !== undefined) patch.phone = body.status.phone ?? null;
-        if (body.status?.error !== undefined) patch.error = body.status.error ?? null;
+        // Accept both the current worker's flat status payload and the older
+        // nested `{ status: ... }` shape.
+        const status = body.status ?? {
+          state: body.state,
+          guid: body.guid,
+          phone: body.phone,
+          error: body.error,
+        };
+        if (status.state) patch.state = status.state;
+        if (status.guid !== undefined) patch.guid = status.guid ?? null;
+        if (status.phone !== undefined) patch.phone = status.phone ?? null;
+        if (status.error !== undefined) patch.error = status.error ?? null;
         const chats = normalizeChats((body.chats ?? []) as never);
         if (chats.length) patch.chats = chats as never;
         await admin.from("bridge_state").update(patch).eq("id", 1);
@@ -70,15 +82,24 @@ export const Route = createFileRoute("/api/public/rubika/outbox")({
             .in("id", ids);
         }
 
-        return Response.json({
-          jobs: (jobs ?? []).map((job) => ({
+        const normalizedJobs = (jobs ?? []).map((job) => ({
             id: job.id,
             kind: job.kind,
             chatGuid: job.chat_guid,
             text: job.text,
             commandType: job.command_type,
             commandValue: job.command_value,
-          })),
+          }));
+        return Response.json({
+          // `jobs` remains for backwards compatibility. The Python worker
+          // consumes the explicit message/command collections.
+          jobs: normalizedJobs,
+          messages: normalizedJobs
+            .filter((job) => job.kind === "send")
+            .map((job) => ({ id: job.id, chatGuid: job.chatGuid, text: job.text })),
+          commands: normalizedJobs
+            .filter((job) => job.kind === "command")
+            .map((job) => ({ id: job.id, type: job.commandType, value: job.commandValue })),
         });
       },
     },

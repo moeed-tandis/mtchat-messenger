@@ -120,15 +120,19 @@ def detect_type(update: Any, file_inline=None) -> str:
 
 # ------------------------------------------------------------------ panel I/O
 async def report(state: str, error: Optional[str] = None, chats=None):
-    payload: dict[str, Any] = {"state": state, "error": error}
+    status: dict[str, Any] = {"state": state, "error": error}
     if my_guid:
-        payload["guid"] = my_guid
+        status["guid"] = my_guid
     if pending_phone:
-        payload["phone"] = pending_phone
+        status["phone"] = pending_phone
+    payload: dict[str, Any] = {"status": status}
     if chats is not None:
         payload["chats"] = chats
     try:
-        await http.post(f"{BASE_URL}/api/public/rubika/outbox", json=payload, headers=HEADERS)
+        response = await http.post(f"{BASE_URL}/api/public/rubika/outbox", json=payload, headers=HEADERS)
+        if response.status_code == 401:
+            print("unauthorized — bridge secret does not match the panel")
+        response.raise_for_status()
     except Exception as exc:  # network hiccup — keep running
         print(f"[report error] {exc}")
 
@@ -137,11 +141,12 @@ async def deliver(messages: list[dict]):
     if not messages:
         return
     try:
-        await http.post(
+        response = await http.post(
             f"{BASE_URL}/api/public/rubika/inbound",
             json={"messages": messages},
             headers=HEADERS,
         )
+        response.raise_for_status()
     except Exception as exc:
         print(f"[deliver error] {exc}")
 

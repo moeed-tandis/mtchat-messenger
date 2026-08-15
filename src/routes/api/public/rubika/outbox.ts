@@ -21,6 +21,10 @@ export const Route = createFileRoute("/api/public/rubika/outbox")({
         let body: {
           status?: { state?: string; guid?: string | null; phone?: string | null; error?: string | null };
           chats?: unknown[];
+          state?: string;
+          guid?: string | null;
+          phone?: string | null;
+          error?: string | null;
         } = {};
         try {
           body = (await request.json()) as typeof body;
@@ -39,12 +43,12 @@ export const Route = createFileRoute("/api/public/rubika/outbox")({
         } = { last_heartbeat_at: now, updated_at: now };
         // Accept both the current worker's flat status payload and the older
         // nested `{ status: ... }` shape.
-        const status: {
-          state?: string;
-          guid?: string | null;
-          phone?: string | null;
-          error?: string | null;
-        } = body.status ?? body;
+        const status = body.status ?? {
+          state: body.state,
+          guid: body.guid,
+          phone: body.phone,
+          error: body.error,
+        };
         if (status.state) patch.state = status.state;
         if (status.guid !== undefined) patch.guid = status.guid ?? null;
         if (status.phone !== undefined) patch.phone = status.phone ?? null;
